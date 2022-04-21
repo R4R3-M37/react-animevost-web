@@ -2,102 +2,86 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import useFetch from '../../hooks/useFetch'
 import Spoiler from './components/Spoiler'
-import Video from './components/Video'
+import MediaPlayer from './components/MediaPlayer'
 
-const AnimePage = ({ response }) => {
-	const apiUrl = 'api.animetop.info/v1/playlist'
+const AnimePage = () => {
 	const { id } = useParams()
 
-	const [{ response: responseVideo }, doFetch] = useFetch(apiUrl)
+	const apiUrl = '/v1/info'
+	const apiUrlMedia = '/v1/playlist'
 
-	const [isSpoilerSeriesActive, setIsSpoilerSeriesActive] = useState(false)
-	const [isSpoilerDescriptionActive, setIsSpoilerDescriptionActive] = useState(false)
-	const [isSpoilerYearActive, setIsSpoilerYearActive] = useState(false)
-	const [isSpoilerGenreActive, setIsSpoilerGenreActive] = useState(false)
-	const [isSpoilerDirectorActive, setIsSpoilerDirectorActive] = useState(false)
+	const [{ response }, doFetch] = useFetch(apiUrl)
+	const [{ response: responseMedia }, doFetchMedia] = useFetch(apiUrlMedia)
 
-	const firstSeriaArray = []
-	const [videoScr, setVideoSrc] = useState(null)
-	const firstSeriaFinder = (anime) => anime.name === '1 серия' && firstSeriaArray.push(anime)
-	const firstSeriaIndex = responseVideo && responseVideo.map((a) => firstSeriaFinder(a))
+	const [videoActive, setVideoActive] = useState(null)
 
-	const currentAnime = response && response.data.find((anime) => anime.id === Number(id))
-
-	const gen = currentAnime.genre.split(',').map((a, index) => (
-		<span className='me-2 mb-1 mt-1 badge bg-secondary' key={index}>
-			{a}
-		</span>
-	))
-
-	const series =
-		responseVideo &&
-		responseVideo.map((anime, index) => (
-			<button
-				className={
-					anime.hd === videoScr
-						? 'me-2 mb-1 mt-1 btn btn-secondary'
-						: 'me-2 mb-1 mt-1 btn btn-outline-secondary'
-				}
-				key={index}
-				onClick={() => {
-					setVideoSrc(anime.hd)
-				}}>
-				{anime.name}
-			</button>
+	const anime = response && response.data[0]
+	const animeMedia = response && responseMedia
+	const genre =
+		anime &&
+		anime.genre.split(',').map((a, index) => (
+			<span className='me-2 mb-1 mt-1 badge bg-secondary' key={index}>
+				{a}
+			</span>
 		))
+	animeMedia &&
+		animeMedia.sort((a, b) => {
+			const matchA = a.name.match(/\d+/)
+			const matchB = b.name.match(/\d+/)
+			return matchA && matchB ? Number(matchA[0]) - Number(matchB[0]) : 1
+		})
+
+	useEffect(() => {
+		if (!animeMedia) {
+			return
+		}
+		setVideoActive(animeMedia && animeMedia[0].hd)
+	}, [animeMedia])
 
 	useEffect(() => {
 		doFetch({
 			method: 'post',
-			data: `id=${Number(id)}`,
+			data: `id=${id}`,
 		})
-	}, [doFetch])
 
-	useEffect(() => {
-		if (!responseVideo) {
-			return
-		}
-		setVideoSrc(firstSeriaArray[0].hd)
-	}, [responseVideo])
+		doFetchMedia({
+			method: 'post',
+			data: `id=${id}`,
+		})
+	}, [doFetch, doFetchMedia])
+
+	if (!response) {
+		return null
+	}
 
 	return (
-		<div className='anime-page container'>
-			<h3 className='anime-title text-center my-3'>{currentAnime.title.split('/')[0]}</h3>
-			<div className='anime-video'>
-				<Video videoScr={videoScr} />
-			</div>
-			<div className='anime-meta'>
-				<Spoiler
-					title={'Серии'}
-					isActive={isSpoilerSeriesActive}
-					setIsActive={setIsSpoilerSeriesActive}
-					currentAnime={series ? series : 'Нет серий, Анонс?'}
-				/>
-				<Spoiler
-					title={'Описание'}
-					isActive={isSpoilerDescriptionActive}
-					setIsActive={setIsSpoilerDescriptionActive}
-					currentAnime={currentAnime.description}
-				/>
-				<Spoiler
-					title={'Жанр'}
-					isActive={isSpoilerGenreActive}
-					setIsActive={setIsSpoilerGenreActive}
-					genre={gen}
-				/>
-				<Spoiler
-					title={'Создатель'}
-					isActive={isSpoilerDirectorActive}
-					setIsActive={setIsSpoilerDirectorActive}
-					currentAnime={currentAnime.director}
-				/>
-				<Spoiler
-					title={'Год выхода'}
-					isActive={isSpoilerYearActive}
-					setIsActive={setIsSpoilerYearActive}
-					currentAnime={currentAnime.year}
-				/>
-			</div>
+		<div className='container'>
+			<h4 className='text-center my-3'>{anime.title.split('/')[0]}</h4>
+			<MediaPlayer scr={videoActive} id={videoActive} />
+			<Spoiler title={'Серии'}>
+				{animeMedia ? (
+					animeMedia &&
+					animeMedia.map((anime, index) => (
+						<button
+							onClick={() => setVideoActive(anime.hd)}
+							className={
+								anime.hd === videoActive
+									? 'me-2 mb-1 mt-1 btn btn-secondary'
+									: 'me-2 mb-1 mt-1 btn btn-outline-secondary'
+							}
+							key={index}
+						>
+							{anime.name}
+						</button>
+					))
+				) : (
+					<code>Нет серий, Анонс?!</code>
+				)}
+			</Spoiler>
+			<Spoiler title={'Описание'}>{anime.description}</Spoiler>
+			<Spoiler title={'Жанр'}>{genre}</Spoiler>
+			<Spoiler title={'Создатель'}>{anime.director}</Spoiler>
+			<Spoiler title={'Год выхода'}>{anime.year}</Spoiler>
 		</div>
 	)
 }

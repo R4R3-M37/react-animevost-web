@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import axios from 'axios'
 
 const useFetch = (url) => {
-	const baseUrl = 'https://'
+	const baseUrl = 'https://api.animetop.info'
 	const [isLoading, setIsLoading] = useState(false)
 	const [response, setResponse] = useState(null)
 	const [error, setError] = useState(null)
