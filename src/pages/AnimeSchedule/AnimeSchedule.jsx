@@ -53,7 +53,7 @@ const AnimeSchedule = () => {
 	return (
 		<div className='container'>
 			{days.map((day) => (
-				<Spoiler title={dayChecker(day)} key={day}>
+				<Spoiler title={dayChecker(day)} show={new Date().getDay() === day + 1} key={day}>
 					<div className='row'>
 						{responseSchedule &&
 							responseAnime &&
